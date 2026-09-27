@@ -43,6 +43,9 @@ Otherwise, fall back to native OS notifications (`osascript` on macOS,
 **Without:** run `gh pr view --json number,url,headRefName,baseRefName`.
 If no open PR found, ask the user for a URL.
 
+Load the matching project reference from Step 1.6 before choosing a
+checkout or updating the branch; it may override setup as well as later phases.
+
 #### Step 1.2: Clone or locate repository
 
 Check `$GIT_DIR/<repository>` (default `~/git/<repository>`) for existing
@@ -93,8 +96,9 @@ matching file.
 **APM** (`microsoft/apm`): See [references/apm.md](references/apm.md)
 **OpenShift / Kubernetes** (`openshift*/*`, `kubernetes*/*`): See [references/openshift.md](references/openshift.md)
 **skillsaw** (`stbenjam/skillsaw`): See [references/skillsaw.md](references/skillsaw.md)
+**T3 Code** (`pingdotgg/t3code`): See [references/t3code.md](references/t3code.md)
 
-Matching references override the corresponding phases below.
+Matching references override the corresponding setup steps and phases.
 
 #### Step 1.7: Schedule the loop
 
