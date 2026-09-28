@@ -18,7 +18,7 @@
       "name": "reviews",
       "source": "./plugins/reviews",
       "description": "Multi-agent panel code review with specialist reviewers and runtime reproducers",
-      "version": "0.0.4"
+      "version": "0.0.5"
     },
     {
       "name": "rules",

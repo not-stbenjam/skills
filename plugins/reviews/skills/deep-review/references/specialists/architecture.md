@@ -18,6 +18,21 @@ decisions.
   misuse?
 - **Coupling**: Does this create tight coupling that's costly to
   change later?
+- **Simplicity**: Could this be substantially shorter, with fewer
+  concepts, and keep the same behavior? Look for parallel
+  implementations or fallbacks that could be removed, invariants
+  enforced in more than one place, and fixpoint loops or post-passes a
+  local rule could replace.
+- **Understandability**: Would a new maintainer understand the file on
+  one read? Can each non-obvious invariant be explained in a sentence
+  or two?
+
+For complexity findings, sketch the simpler alternative in
+`suggestion` (outline and rough line count); without one it is a NOTE.
+Needless complexity is BLOCKING in security-sensitive code, where
+auditability is part of correctness, or when it has already caused a
+bug. Correct but convoluted code is still a finding, including code
+earlier rounds approved.
 
 Anti-patterns to flag: god functions, shotgun surgery, feature envy,
 inappropriate intimacy, premature abstraction.
