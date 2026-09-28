@@ -29,5 +29,4 @@ THESE ARE CRITICAL INSTRUCTIONS WHEN WORKING WITH GIT.
 
 - Only include AI attribution in the form the repository asks for. If the repository's contributing docs, CLAUDE.md/AGENTS.md, or PR template ask for a specific AI attribution or disclosure, follow that exactly.
 - Otherwise, never add `Co-authored-by` (or any variant) for the AI in commits or pull requests. The AI is not an author.
-- When the repository does not specify a format, disclose AI use by ending the commit message with an `Assisted-by: AI` trailer.
-- Never name the model, tool, vendor, or version in attribution (no "Claude", "Opus", "Claude Code", "GPT", "Codex", etc.).
+- When the repository does not specify a format, disclose AI use by ending the commit message with an `Assisted-by: AI` trailer. Do not name the model, tool, vendor, or version (no "Claude", "Opus", "Claude Code", "GPT", "Codex", etc.).
