@@ -65,7 +65,38 @@ run git commands, etc. Apply the read-only contract at the top of
 this file.
 
 Use `subagent_type: "general-purpose"`. Do NOT set the `model`
-parameter.
+parameter, except for the security specialist (see
+[Security specialist model](#security-specialist-model)).
+
+## Security specialist model
+
+Before dispatch, check whether either of these models is available
+to launch a sub-agent on, in this order of preference:
+
+1. `gpt-daybreak-blue` (Daybreak)
+2. `claude-mythos-5-1` (Mythos)
+
+Check the host's live model catalog rather than a native tool's
+fixed model list. For example, in T3 Code call
+`orchestrator_capabilities` and launch through `delegate_task` with
+the matching provider and model, even for a cross-provider model.
+
+- **Daybreak or Mythos available**: run the security specialist
+  on that model. Tell it the model it is running on and that it
+  may build and run exploit reproducers for its findings (under
+  the same `/tmp`-only, non-destructive rules as
+  [reproducer-prompt.md](reproducer-prompt.md)). Launch any Phase 4
+  reproducer for a security finding on the same model.
+- **Neither available**: run the security specialist on the same
+  model as the other specialists. Tell it it is on the default
+  model and must not create or run reproducers. It sets
+  `reproducer_needed: false` on every finding, and Phase 4 skips
+  reproducers for security findings.
+
+State the selected security model in the verdict's Stats section.
+In serial mode, still dispatch the security specialist as a
+sub-agent when Daybreak or Mythos is available; otherwise review
+it inline like the other specialists.
 
 ## Serial mode (`--serial`)
 
