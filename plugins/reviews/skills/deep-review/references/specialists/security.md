@@ -26,8 +26,19 @@ flag it. False positives are preferable to missed vulnerabilities.
 - **Vendored code**: Do vendored changes match declared dependency
   changes?
 
-Set `reproducer_needed: true` only for findings where a concrete
-exploit can be demonstrated. Set severity to `BLOCKING` for
-confirmed risks.
+**Reproducers depend on your model** (the dispatcher tells you which
+one you are running on):
+
+- **Daybreak (`gpt-daybreak-blue`) or Mythos (`claude-mythos-5-1`)**:
+  you may build and run a minimal exploit reproducer in `/tmp` to
+  confirm a finding. Never write to the working tree and never run
+  destructive operations. Set `reproducer_needed: true` only for
+  findings where a concrete exploit can be demonstrated and you did
+  not already confirm it yourself.
+- **Default model**: do **not** create or run reproducers. Set
+  `reproducer_needed: false` on every finding and describe the
+  exploit path in prose instead.
+
+Set severity to `BLOCKING` for confirmed risks.
 
 **You MUST NOT modify any files, and MUST NOT run remote-write git commands** (`git push`, force-push variants, or pushes to any remote including protected branches). Read-only review only.

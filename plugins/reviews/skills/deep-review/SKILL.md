@@ -55,7 +55,7 @@ All are enabled unless excluded with `-`:
 |------------|------|-------------|
 | **bugs** | Functional bugs: missing calls, wrong logic, unhandled edge cases | Yes — mandatory |
 | **adversarial** | Break the code: bad inputs, race conditions, boundary values | Yes — mandatory |
-| **security** | Vulnerabilities, credential handling, dependency trust, supply chain integrity | When claiming a concrete exploit |
+| **security** | Vulnerabilities, credential handling, dependency trust, supply chain integrity | Only on Daybreak or Mythos, for a concrete exploit |
 | **architecture** | Structural patterns, SOLID, cross-file impact, module boundaries | No |
 | **consistency** | Duplicate helpers, convention drift, style match with existing code | No |
 | **qa** | Test coverage gaps, missing edge-case tests, concrete test suggestions | No |
@@ -131,7 +131,10 @@ Each specialist prompt lives under
 JSON schema, parallel/serial modes, and external reviewers are in
 [references/dispatch.md](references/dispatch.md). Give every specialist the
 review round, multiplier, prior findings, and the distinction between carried
-blockers and new candidates.
+blockers and new candidates. The security specialist runs on Daybreak
+(`gpt-daybreak-blue`) or Mythos (`claude-mythos-5-1`) when available, and
+otherwise on the same model as the rest without reproducers; see
+[Security specialist model](references/dispatch.md#security-specialist-model).
 
 | Specialist | Prompt |
 |------------|--------|

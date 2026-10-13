@@ -2,7 +2,11 @@
 
 For every finding where `reproducer_needed` is `true` AND severity
 is `BLOCKING`, launch a **reproducer subagent** (up to 5 in
-parallel, 10-minute timeout each). Each gets this prompt:
+parallel, 10-minute timeout each). Security findings get a
+reproducer only when the security specialist ran on Daybreak or
+Mythos, and that reproducer runs on the same model; see
+[Security specialist model](dispatch.md#security-specialist-model).
+Each gets this prompt:
 
 > Create and execute a minimal reproducer to verify this bug.
 >
