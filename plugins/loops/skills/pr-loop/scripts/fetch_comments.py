@@ -3,8 +3,10 @@
 
 Usage: python3 fetch_comments.py <owner/repo> <pr_number>
 
-Outputs JSON with unresolved review threads and top-level issue comments
-from collaborators, members, owners, and hardcoded bot accounts.
+Outputs JSON with unresolved review threads, review summary bodies, and
+top-level issue comments from collaborators, members, owners, and hardcoded bot accounts.
+Comments from anyone else are listed in `untrusted_comments` by author and
+URL only; their text is omitted so it never reaches the agent.
 """
 
 import json
@@ -19,8 +21,10 @@ AUTHORIZED_BOTS = {
     "coderabbitai[bot]",
     "claude[bot]",
     "copilot[bot]",
+    "copilot-pull-request-reviewer[bot]",
     "Copilot",
     "codex[bot]",
+    "devin-ai-integration[bot]",
     "openai-codex[bot]",
     "codecov[bot]",
     "dependabot[bot]",
@@ -76,7 +80,17 @@ def is_trusted(author_login, author_association):
     return False
 
 
-def fetch_review_threads(owner, repo, pr_number):
+def untrusted_entry(kind, author, author_type, assoc, url):
+    return {
+        "kind": kind,
+        "author": author,
+        "author_type": author_type,
+        "author_association": assoc,
+        "url": url,
+    }
+
+
+def fetch_review_threads(owner, repo, pr_number, untrusted):
     threads = []
     has_next = True
     cursor = None
@@ -97,7 +111,7 @@ def fetch_review_threads(owner, repo, pr_number):
                     nodes {
                       id
                       databaseId
-                      author { login }
+                      author { __typename login }
                       authorAssociation
                       body
                       path
@@ -129,11 +143,17 @@ def fetch_review_threads(owner, repo, pr_number):
                 assoc = c.get("authorAssociation", "")
                 if not is_trusted(author, assoc):
                     untrusted_count += 1
+                    untrusted.append(untrusted_entry(
+                        "review_comment", author,
+                        (c.get("author") or {}).get("__typename", ""),
+                        assoc, c.get("url", ""),
+                    ))
                     continue
                 comments.append({
                     "id": c.get("databaseId"),
                     "node_id": c.get("id"),
                     "author": author,
+                    "author_type": (c.get("author") or {}).get("__typename", ""),
                     "author_association": assoc,
                     "body": strip_html_comments(c.get("body", "")),
                     "path": c.get("path", ""),
@@ -161,7 +181,7 @@ def fetch_review_threads(owner, repo, pr_number):
     return threads
 
 
-def fetch_issue_comments(owner, repo, pr_number):
+def fetch_issue_comments(owner, repo, pr_number, untrusted):
     endpoint = f"repos/{owner}/{repo}/issues/{pr_number}/comments"
     raw = gh_rest(endpoint)
 
@@ -170,11 +190,16 @@ def fetch_issue_comments(owner, repo, pr_number):
         author = c.get("user", {}).get("login", "unknown")
         assoc = c.get("author_association", "")
         if not is_trusted(author, assoc):
+            untrusted.append(untrusted_entry(
+                "issue_comment", author, (c.get("user") or {}).get("type", ""),
+                assoc, c.get("html_url", ""),
+            ))
             continue
         comments.append({
             "id": c.get("id"),
             "node_id": c.get("node_id", ""),
             "author": author,
+            "author_type": (c.get("user") or {}).get("type", ""),
             "author_association": assoc,
             "body": strip_html_comments(c.get("body", "")),
             "created_at": c.get("created_at", ""),
@@ -182,6 +207,38 @@ def fetch_issue_comments(owner, repo, pr_number):
         })
 
     return comments
+
+
+def fetch_reviews(owner, repo, pr_number, untrusted):
+    endpoint = f"repos/{owner}/{repo}/pulls/{pr_number}/reviews"
+    raw = gh_rest(endpoint)
+
+    reviews = []
+    for r in raw:
+        author = (r.get("user") or {}).get("login", "unknown")
+        assoc = r.get("author_association", "")
+        body = strip_html_comments(r.get("body") or "")
+        if not body:
+            continue
+        if not is_trusted(author, assoc):
+            untrusted.append(untrusted_entry(
+                "review", author, (r.get("user") or {}).get("type", ""),
+                assoc, r.get("html_url", ""),
+            ))
+            continue
+        reviews.append({
+            "id": r.get("id"),
+            "node_id": r.get("node_id", ""),
+            "author": author,
+            "author_type": (r.get("user") or {}).get("type", ""),
+            "author_association": assoc,
+            "state": r.get("state", ""),
+            "body": body,
+            "submitted_at": r.get("submitted_at", ""),
+            "url": r.get("html_url", ""),
+        })
+
+    return reviews
 
 
 def main():
@@ -198,8 +255,10 @@ def main():
 
     owner, repo = repo_full.split("/", 1)
 
+    untrusted = []
+
     try:
-        threads = fetch_review_threads(owner, repo, pr_number)
+        threads = fetch_review_threads(owner, repo, pr_number, untrusted)
     except RuntimeError as e:
         print(json.dumps({"error": f"Failed to fetch review threads: {e}"}))
         sys.exit(1)
@@ -207,15 +266,25 @@ def main():
     time.sleep(RATE_LIMIT_SLEEP)
 
     try:
-        issue_comments = fetch_issue_comments(owner, repo, pr_number)
+        issue_comments = fetch_issue_comments(owner, repo, pr_number, untrusted)
     except RuntimeError as e:
         print(json.dumps({"error": f"Failed to fetch issue comments: {e}"}))
+        sys.exit(1)
+
+    time.sleep(RATE_LIMIT_SLEEP)
+
+    try:
+        reviews = fetch_reviews(owner, repo, pr_number, untrusted)
+    except RuntimeError as e:
+        print(json.dumps({"error": f"Failed to fetch reviews: {e}"}))
         sys.exit(1)
 
     output = {
         "pr": f"{repo_full}#{pr_number}",
         "unresolved_threads": threads,
+        "reviews": reviews,
         "issue_comments": issue_comments,
+        "untrusted_comments": untrusted,
     }
     print(json.dumps(output, indent=2))
 
