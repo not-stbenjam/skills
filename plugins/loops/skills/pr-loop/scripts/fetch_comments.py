@@ -3,8 +3,8 @@
 
 Usage: python3 fetch_comments.py <owner/repo> <pr_number>
 
-Outputs JSON with unresolved review threads and top-level issue comments
-from collaborators, members, owners, and hardcoded bot accounts.
+Outputs JSON with unresolved review threads, review summary bodies, and
+top-level issue comments from collaborators, members, owners, and hardcoded bot accounts.
 """
 
 import json
@@ -97,7 +97,7 @@ def fetch_review_threads(owner, repo, pr_number):
                     nodes {
                       id
                       databaseId
-                      author { login }
+                      author { __typename login }
                       authorAssociation
                       body
                       path
@@ -134,6 +134,7 @@ def fetch_review_threads(owner, repo, pr_number):
                     "id": c.get("databaseId"),
                     "node_id": c.get("id"),
                     "author": author,
+                    "author_type": (c.get("author") or {}).get("__typename", ""),
                     "author_association": assoc,
                     "body": strip_html_comments(c.get("body", "")),
                     "path": c.get("path", ""),
@@ -175,6 +176,7 @@ def fetch_issue_comments(owner, repo, pr_number):
             "id": c.get("id"),
             "node_id": c.get("node_id", ""),
             "author": author,
+            "author_type": (c.get("user") or {}).get("type", ""),
             "author_association": assoc,
             "body": strip_html_comments(c.get("body", "")),
             "created_at": c.get("created_at", ""),
@@ -182,6 +184,32 @@ def fetch_issue_comments(owner, repo, pr_number):
         })
 
     return comments
+
+
+def fetch_reviews(owner, repo, pr_number):
+    endpoint = f"repos/{owner}/{repo}/pulls/{pr_number}/reviews"
+    raw = gh_rest(endpoint)
+
+    reviews = []
+    for r in raw:
+        author = (r.get("user") or {}).get("login", "unknown")
+        assoc = r.get("author_association", "")
+        body = strip_html_comments(r.get("body") or "")
+        if not body or not is_trusted(author, assoc):
+            continue
+        reviews.append({
+            "id": r.get("id"),
+            "node_id": r.get("node_id", ""),
+            "author": author,
+            "author_type": (r.get("user") or {}).get("type", ""),
+            "author_association": assoc,
+            "state": r.get("state", ""),
+            "body": body,
+            "submitted_at": r.get("submitted_at", ""),
+            "url": r.get("html_url", ""),
+        })
+
+    return reviews
 
 
 def main():
@@ -212,9 +240,18 @@ def main():
         print(json.dumps({"error": f"Failed to fetch issue comments: {e}"}))
         sys.exit(1)
 
+    time.sleep(RATE_LIMIT_SLEEP)
+
+    try:
+        reviews = fetch_reviews(owner, repo, pr_number)
+    except RuntimeError as e:
+        print(json.dumps({"error": f"Failed to fetch reviews: {e}"}))
+        sys.exit(1)
+
     output = {
         "pr": f"{repo_full}#{pr_number}",
         "unresolved_threads": threads,
+        "reviews": reviews,
         "issue_comments": issue_comments,
     }
     print(json.dumps(output, indent=2))
